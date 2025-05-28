@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
-    "@prisma/client": "latest",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
@@ -51,7 +50,6 @@
     "next-themes": "^0.4.4",
     "pg": "latest",
     "pg-native": "latest",
-    "prisma": "latest",
     "react": "^19",
     "react-day-picker": "8.10.1",
     "react-dom": "^19",

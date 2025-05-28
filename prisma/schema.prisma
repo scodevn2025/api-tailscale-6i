@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Device {
@@ -24,6 +24,7 @@ model Device {
 model DeviceNotification {
   id                   String   @id @default(cuid())
   deviceId             String
+  deviceName           String
   statusMessage        String
   tailscaleURL         String?
   originalLogMessage   String?

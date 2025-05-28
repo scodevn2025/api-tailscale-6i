@@ -3,7 +3,6 @@ import { DeviceList } from "@/components/DeviceList"
 import { DeviceStats } from "@/components/DeviceStats"
 import { ApiTester } from "@/components/ApiTester"
 import { PerformanceMetrics } from "@/components/PerformanceMetrics"
-import { UserPreferences } from "@/components/UserPreferences"
 import { NotificationCenter } from "@/components/NotificationCenter"
 
 export default function Home() {
@@ -22,8 +21,6 @@ export default function Home() {
       </div>
 
       <DeviceList />
-
-      <UserPreferences />
 
       {/* API Tester - chỉ hiển thị trong development */}
       {process.env.NODE_ENV === "development" && <ApiTester />}
