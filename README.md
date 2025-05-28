@@ -28,17 +28,17 @@ Một hệ thống giám sát thiết bị Tailscale real-time được xây d�
 ## 🔌 API Documentation
 
 ### Base URL
-```
+\`\`\`
 https://api.auva.vn
 # hoặc local development
 http://localhost:3000
-```
+\`\`\`
 
 ### Authentication
 Tất cả API endpoints yêu cầu API key trong header:
-```
+\`\`\`
 x-api-key: your-secret-api-key
-```
+\`\`\`
 
 ---
 
@@ -47,14 +47,14 @@ x-api-key: your-secret-api-key
 ### 1. Device Notifications (Webhook)
 **Endpoint chính để nhận thông báo từ script bash**
 
-```http
+\`\`\`http
 POST /api/device_notifications
 Content-Type: application/json
 x-api-key: your-secret-api-key
-```
+\`\`\`
 
 **Request Body:**
-```json
+\`\`\`json
 {
   "serialNumber": "string",     // Serial number của thiết bị (required)
   "deviceName": "string",       // Tên thiết bị (required)
@@ -62,19 +62,19 @@ x-api-key: your-secret-api-key
   "tailscaleURL": "string",     // URL xác thực Tailscale (optional)
   "originalLogMessage": "string" // Log gốc từ Tailscale (optional)
 }
-```
+\`\`\`
 
 **Response:**
-```json
+\`\`\`json
 {
   "success": true,
   "deviceId": "uuid",
   "notificationId": "uuid"
 }
-```
+\`\`\`
 
 **Curl Example:**
-```bash
+\`\`\`bash
 curl -X POST "https://api.auva.vn/api/device_notifications" \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: your-secret-api-key" \\
@@ -85,16 +85,16 @@ curl -X POST "https://api.auva.vn/api/device_notifications" \\
     "tailscaleURL": null,
     "originalLogMessage": "{\\"BackendState\\":\\"Running\\"}"
   }'
-```
+\`\`\`
 
 ---
 
 ### 2. Get Devices
 **Lấy danh sách thiết bị với phân trang và lọc**
 
-```http
+\`\`\`http
 GET /api/devices?page=1&limit=10&status=all&search=
-```
+\`\`\`
 
 **Query Parameters:**
 - `page` (number): Trang hiện tại (default: 1)
@@ -103,7 +103,7 @@ GET /api/devices?page=1&limit=10&status=all&search=
 - `search` (string): Tìm kiếm theo tên thiết bị hoặc serial number
 
 **Response:**
-```json
+\`\`\`json
 {
   "devices": [
     {
@@ -134,24 +134,24 @@ GET /api/devices?page=1&limit=10&status=all&search=
   },
   "_status": "live|fallback|error"
 }
-```
+\`\`\`
 
 **Curl Example:**
-```bash
+\`\`\`bash
 curl "https://api.auva.vn/api/devices?page=1&limit=5&status=active"
-```
+\`\`\`
 
 ---
 
 ### 3. Device Statistics
 **Lấy thống kê tổng quan về thiết bị**
 
-```http
+\`\`\`http
 GET /api/device_stats
-```
+\`\`\`
 
 **Response:**
-```json
+\`\`\`json
 {
   "total": 100,
   "active": 75,
@@ -159,90 +159,90 @@ GET /api/device_stats
   "offline": 10,
   "_status": "live|fallback|error"
 }
-```
+\`\`\`
 
 **Curl Example:**
-```bash
+\`\`\`bash
 curl "https://api.auva.vn/api/device_stats"
-```
+\`\`\`
 
 ---
 
 ### 4. Delete Device
 **Xóa thiết bị và tất cả thông báo liên quan**
 
-```http
+\`\`\`http
 DELETE /api/devices/{deviceId}
-```
+\`\`\`
 
 **Response:**
-```json
+\`\`\`json
 {
   "success": true
 }
-```
+\`\`\`
 
 **Curl Example:**
-```bash
+\`\`\`bash
 curl -X DELETE "https://api.auva.vn/api/devices/uuid-here"
-```
+\`\`\`
 
 ---
 
 ### 5. Real-time Updates (SSE)
 **Server-Sent Events để cập nhật thống kê real-time**
 
-```http
+\`\`\`http
 GET /api/device_updates_stream
-```
+\`\`\`
 
 **Response Stream:**
-```
+\`\`\`
 data: {"timestamp":"2024-01-01T00:00:00Z","stats":{"active":75,"auth_required":15,"offline":10},"_status":"live"}
 
 data: {"timestamp":"2024-01-01T00:00:30Z","stats":{"active":76,"auth_required":14,"offline":10},"_status":"live"}
-```
+\`\`\`
 
 **JavaScript Example:**
-```javascript
+\`\`\`javascript
 const eventSource = new EventSource('/api/device_updates_stream');
 
 eventSource.onmessage = function(event) {
   const data = JSON.parse(event.data);
   console.log('Stats update:', data.stats);
 };
-```
+\`\`\`
 
 ---
 
 ### 6. Health Check
 **Kiểm tra trạng thái hệ thống và database**
 
-```http
+\`\`\`http
 GET /api/health
-```
+\`\`\`
 
 **Response:**
-```json
+\`\`\`json
 {
   "status": "healthy|unhealthy",
   "database": "connected|disconnected",
   "timestamp": "2024-01-01T00:00:00Z",
   "version": "PostgreSQL 15.0"
 }
-```
+\`\`\`
 
 ---
 
 ### 7. Database Test
 **Test kết nối database và kiểm tra bảng**
 
-```http
+\`\`\`http
 GET /api/test-db
-```
+\`\`\`
 
 **Response:**
-```json
+\`\`\`json
 {
   "status": "success|error",
   "timestamp": "2024-01-01T00:00:00Z",
@@ -250,7 +250,7 @@ GET /api/test-db
   "deviceCount": 100,
   "message": "Database connection successful"
 }
-```
+\`\`\`
 
 ---
 
@@ -263,13 +263,13 @@ GET /api/test-db
 - `500` - Internal Server Error
 
 ### Error Response Format
-```json
+\`\`\`json
 {
   "error": "Error message",
   "details": "Detailed error information",
   "_status": "error"
 }
-```
+\`\`\`
 
 ### Fallback Behavior
 Khi database không khả dụng, API sẽ:
@@ -282,7 +282,7 @@ Khi database không khả dụng, API sẽ:
 ## 🛠️ Setup và Cài đặt
 
 ### 1. Environment Variables
-```env
+\`\`\`env
 # Database
 DATABASE_URL=postgresql://postgres:postgres@159.69.15.251:54322/postgres
 
@@ -293,19 +293,19 @@ API_SECRET_KEY=your-secret-api-key-here
 NEXT_PUBLIC_SUPABASE_URL=http://159.69.15.251:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
+\`\`\`
 
 ### 2. Database Setup
-```bash
+\`\`\`bash
 # Chạy script setup database
 node scripts/setup-db.js
 
 # Hoặc chạy SQL script trực tiếp trong Supabase
 # Copy nội dung từ sql/init_database.sql
-```
+\`\`\`
 
 ### 3. Installation
-```bash
+\`\`\`bash
 # Clone repository
 git clone <repository-url>
 cd tailscale-monitor
@@ -318,23 +318,23 @@ node scripts/setup-db.js
 
 # Start development server
 npm run dev
-```
+\`\`\`
 
 ### 4. Production Deployment
-```bash
+\`\`\`bash
 # Build application
 npm run build
 
 # Start production server
 npm start
-```
+\`\`\`
 
 ---
 
 ## 📱 Client Script (Bash)
 
 ### Script cho thiết bị Tailscale
-```bash
+\`\`\`bash
 #!/bin/bash
 
 # Config
@@ -405,16 +405,16 @@ else
   echo "Error! Status: $HTTP_STATUS, Response: $RESPONSE_BODY"
   echo "$(date): API Error - Status: $HTTP_STATUS, Response: $RESPONSE_BODY" >> "$LOG_FILE"
 fi
-```
+\`\`\`
 
 ### Cron Job Setup
-```bash
+\`\`\`bash
 # Chạy mỗi 5 phút
 */5 * * * * /path/to/tailscale_monitor.sh
 
 # Chạy mỗi phút (cho monitoring chặt chẽ)
 * * * * * /path/to/tailscale_monitor.sh
-```
+\`\`\`
 
 ---
 
