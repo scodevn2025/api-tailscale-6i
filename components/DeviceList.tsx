@@ -18,11 +18,31 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Search, Trash2, ExternalLink, RefreshCcw, AlertCircle, Bug } from "lucide-react"
-import type { Device } from "@/lib/types"
+import { Search, Trash2, ExternalLink, RefreshCcw, AlertCircle, Monitor, Cpu, Wifi, Video, Info } from "lucide-react"
+
+interface Device {
+  id: string
+  serial_number: string
+  device_name: string
+  status: string
+  cpuid?: string
+  device_id?: string
+  mac_address?: string
+  video_device_name?: string
+  video_device_secret?: string
+  video_product_key?: string
+  tailscale_url?: string
+  last_seen: string
+  created_at: string
+  updated_at: string
+  notifications: any[]
+  hasVideoInfo: boolean
+  hasHardwareInfo: boolean
+  needsAuth: boolean
+}
 
 export function DeviceList() {
-  const [devices, setDevices] = useState<(Device & { notifications: any[] })[]>([])
+  const [devices, setDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -30,49 +50,7 @@ export function DeviceList() {
   const [totalPages, setTotalPages] = useState(1)
   const [error, setError] = useState<string | null>(null)
   const [dataStatus, setDataStatus] = useState<"live" | "fallback" | "error">("live")
-  const [debugMode, setDebugMode] = useState(false)
-  const [debugInfo, setDebugInfo] = useState<any>(null)
-
-  const testSimpleAPI = async () => {
-    try {
-      console.log("Testing simple API...")
-      const response = await fetch("/api/test-simple")
-      const text = await response.text()
-      console.log("Simple API response:", text)
-
-      const data = JSON.parse(text)
-      console.log("Simple API parsed:", data)
-
-      if (data.status === "success") {
-        setDevices(data.data.devices)
-        setTotalPages(data.data.pagination.pages)
-        setDataStatus("live")
-        setError(null)
-        return true
-      }
-    } catch (err) {
-      console.error("Simple API test failed:", err)
-      return false
-    }
-    return false
-  }
-
-  const testDebugAPI = async () => {
-    try {
-      console.log("Testing debug API...")
-      const response = await fetch("/api/debug")
-      const text = await response.text()
-      console.log("Debug API response:", text)
-
-      const data = JSON.parse(text)
-      console.log("Debug API parsed:", data)
-      setDebugInfo(data)
-      return data
-    } catch (err) {
-      console.error("Debug API test failed:", err)
-      return null
-    }
-  }
+  const [expandedDevice, setExpandedDevice] = useState<string | null>(null)
 
   const fetchDevices = async () => {
     setLoading(true)
@@ -86,54 +64,18 @@ export function DeviceList() {
         ...(search && { search }),
       })
 
-      console.log("Fetching devices with params:", params.toString())
-
       const response = await fetch(`/api/devices?${params}`)
-
-      console.log("Response status:", response.status)
-      console.log("Response headers:", Object.fromEntries(response.headers.entries()))
-
-      // Get raw text first for debugging
       const responseText = await response.text()
-      console.log("Raw response (first 500 chars):", responseText.substring(0, 500))
 
-      // Check if response looks like HTML (error page)
-      if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
-        console.error("Received HTML instead of JSON")
-        setError("Server returned HTML error page instead of JSON. Check server logs.")
-        setDataStatus("error")
-
-        // Try simple API as fallback
-        const simpleWorked = await testSimpleAPI()
-        if (simpleWorked) {
-          setError("Main API failed, using test data. Check database connection.")
-          setDataStatus("fallback")
-        }
-        return
-      }
-
-      // Try to parse JSON
       let data
       try {
         data = JSON.parse(responseText)
       } catch (parseError) {
         console.error("Failed to parse JSON:", parseError)
-        console.error("Response text:", responseText)
-
-        setError(`Server returned invalid JSON: ${responseText.substring(0, 100)}...`)
+        setError(`Server returned invalid JSON`)
         setDataStatus("error")
-
-        // Try simple API as fallback
-        const simpleWorked = await testSimpleAPI()
-        if (simpleWorked) {
-          setError("Main API failed, using test data")
-          setDataStatus("fallback")
-        }
         return
       }
-
-      // Handle parsed data
-      console.log("Parsed data:", data)
 
       setDevices(data.devices || [])
       setTotalPages(data.pagination?.pages || 1)
@@ -150,16 +92,8 @@ export function DeviceList() {
       console.error("Error fetching devices:", err)
       setError(err instanceof Error ? err.message : "Failed to fetch devices")
       setDataStatus("error")
-
-      // Try simple API as fallback
-      const simpleWorked = await testSimpleAPI()
-      if (simpleWorked) {
-        setError("Main API failed, using test data")
-        setDataStatus("fallback")
-      } else {
-        setDevices([])
-        setTotalPages(1)
-      }
+      setDevices([])
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }
@@ -211,6 +145,10 @@ export function DeviceList() {
     }
   }
 
+  const toggleDeviceDetails = (deviceId: string) => {
+    setExpandedDevice(expandedDevice === deviceId ? null : deviceId)
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -218,29 +156,12 @@ export function DeviceList() {
           <CardTitle>Devices</CardTitle>
           <div className="flex items-center gap-2">
             {getDataStatusBadge()}
-            <Button variant="outline" size="sm" onClick={() => setDebugMode(!debugMode)}>
-              <Bug className="h-4 w-4" />
-            </Button>
             <Button variant="outline" size="sm" onClick={fetchDevices} disabled={loading}>
               <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               <span className="ml-1">Refresh</span>
             </Button>
           </div>
         </div>
-
-        {debugMode && (
-          <div className="bg-gray-100 p-4 rounded text-xs">
-            <div className="flex gap-2 mb-2">
-              <Button size="sm" onClick={testSimpleAPI}>
-                Test Simple API
-              </Button>
-              <Button size="sm" onClick={testDebugAPI}>
-                Test Debug API
-              </Button>
-            </div>
-            {debugInfo && <pre className="overflow-auto max-h-40">{JSON.stringify(debugInfo, null, 2)}</pre>}
-          </div>
-        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center gap-2">
@@ -253,7 +174,7 @@ export function DeviceList() {
           <div className="relative flex-1">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search devices..."
+              placeholder="Search devices, serial, or MAC..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -280,78 +201,229 @@ export function DeviceList() {
           </div>
         ) : devices.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            {dataStatus === "error" ? (
-              <div>
-                <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                <p>Unable to load devices</p>
-                <div className="flex gap-2 justify-center mt-2">
-                  <Button variant="outline" onClick={fetchDevices}>
-                    Try Again
-                  </Button>
-                  <Button variant="outline" onClick={testSimpleAPI}>
-                    Test Simple API
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p>No devices found</p>
-                {search && <p className="text-sm">Try adjusting your search criteria</p>}
-              </div>
-            )}
+            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+            <p>No devices found</p>
+            {search && <p className="text-sm">Try adjusting your search criteria</p>}
           </div>
         ) : (
           <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Device Name</TableHead>
-                  <TableHead>Serial Number</TableHead>
+                  <TableHead>Device Info</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Hardware</TableHead>
                   <TableHead>Last Seen</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {devices.map((device) => (
-                  <TableRow key={device.id}>
-                    <TableCell className="font-medium">{device.device_name}</TableCell>
-                    <TableCell>{device.serial_number}</TableCell>
-                    <TableCell>{getStatusBadge(device.status)}</TableCell>
-                    <TableCell>{new Date(device.last_seen).toLocaleString()}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {device.notifications[0]?.tailscale_url && (
+                  <>
+                    <TableRow key={device.id} className="cursor-pointer" onClick={() => toggleDeviceDetails(device.id)}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium flex items-center gap-2">
+                            <Monitor className="h-4 w-4" />
+                            {device.device_name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">{device.serial_number}</div>
+                          <div className="flex gap-1 mt-1">
+                            {device.hasVideoInfo && (
+                              <Badge variant="outline" className="text-xs">
+                                <Video className="h-3 w-3 mr-1" />
+                                Video
+                              </Badge>
+                            )}
+                            {device.hasHardwareInfo && (
+                              <Badge variant="outline" className="text-xs">
+                                <Cpu className="h-3 w-3 mr-1" />
+                                HW
+                              </Badge>
+                            )}
+                            {device.mac_address && (
+                              <Badge variant="outline" className="text-xs">
+                                <Wifi className="h-3 w-3 mr-1" />
+                                MAC
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {getStatusBadge(device.status)}
+                          {device.needsAuth && (
+                            <Badge variant="outline" className="text-xs">
+                              Auth URL
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {device.mac_address && <div>MAC: {device.mac_address}</div>}
+                          {device.device_id && <div>ID: {device.device_id}</div>}
+                          {device.cpuid && (
+                            <div className="truncate max-w-[100px]" title={device.cpuid}>
+                              CPU: {device.cpuid.substring(0, 8)}...
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{new Date(device.last_seen).toLocaleString()}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(device.notifications[0].tailscale_url, "_blank")}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleDeviceDetails(device.id)
+                            }}
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <Info className="h-4 w-4" />
                           </Button>
-                        )}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="h-4 w-4" />
+                          {device.tailscale_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                window.open(device.tailscale_url, "_blank")
+                              }}
+                            >
+                              <ExternalLink className="h-4 w-4" />
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Device</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete {device.device_name}? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteDevice(device.id)}>Delete</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                          )}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Device</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete {device.device_name}? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteDevice(device.id)}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {expandedDevice === device.id && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="bg-gray-50">
+                          <div className="p-4 space-y-4">
+                            <h4 className="font-medium">Device Details</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                              <div>
+                                <strong>Serial Number:</strong>
+                                <br />
+                                {device.serial_number}
+                              </div>
+                              <div>
+                                <strong>Device Name:</strong>
+                                <br />
+                                {device.device_name}
+                              </div>
+                              <div>
+                                <strong>Status:</strong>
+                                <br />
+                                {device.status}
+                              </div>
+                              {device.cpuid && (
+                                <div>
+                                  <strong>CPU ID:</strong>
+                                  <br />
+                                  <span className="font-mono text-xs">{device.cpuid}</span>
+                                </div>
+                              )}
+                              {device.device_id && (
+                                <div>
+                                  <strong>Device ID:</strong>
+                                  <br />
+                                  {device.device_id}
+                                </div>
+                              )}
+                              {device.mac_address && (
+                                <div>
+                                  <strong>MAC Address:</strong>
+                                  <br />
+                                  <span className="font-mono">{device.mac_address}</span>
+                                </div>
+                              )}
+                              {device.video_device_name && (
+                                <div>
+                                  <strong>Video Device:</strong>
+                                  <br />
+                                  {device.video_device_name}
+                                </div>
+                              )}
+                              {device.video_product_key && (
+                                <div>
+                                  <strong>Video Product Key:</strong>
+                                  <br />
+                                  {device.video_product_key}
+                                </div>
+                              )}
+                              {device.tailscale_url && (
+                                <div>
+                                  <strong>Tailscale URL:</strong>
+                                  <br />
+                                  <a
+                                    href={device.tailscale_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline"
+                                  >
+                                    {device.tailscale_url.substring(0, 50)}...
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+
+                            {device.notifications.length > 0 && (
+                              <div>
+                                <h5 className="font-medium mb-2">Recent Notifications</h5>
+                                <div className="space-y-2">
+                                  {device.notifications.slice(0, 3).map((notification) => (
+                                    <div key={notification.id} className="text-xs bg-white p-2 rounded border">
+                                      <div className="flex justify-between">
+                                        <span className="font-medium">{notification.status_message}</span>
+                                        <span className="text-gray-500">
+                                          {new Date(notification.timestamp).toLocaleString()}
+                                        </span>
+                                      </div>
+                                      {notification.tailscale_url && (
+                                        <div className="mt-1">
+                                          <a
+                                            href={notification.tailscale_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:underline"
+                                          >
+                                            Auth URL
+                                          </a>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
                 ))}
               </TableBody>
             </Table>

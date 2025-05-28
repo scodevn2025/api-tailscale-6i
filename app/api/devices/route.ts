@@ -20,59 +20,11 @@ export async function GET(request: NextRequest) {
       console.log("Database connection successful:", testResult.rows[0])
     } catch (dbError) {
       console.error("Database connection failed:", dbError)
-
-      // Return fallback data instead of error
       return NextResponse.json({
         devices: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          pages: 0,
-        },
+        pagination: { page: 1, limit: 10, total: 0, pages: 0 },
         _status: "fallback",
         _message: `Database connection failed: ${dbError instanceof Error ? dbError.message : "Unknown error"}`,
-      })
-    }
-
-    // Check if tables exist
-    console.log("Checking if tables exist...")
-    try {
-      const tablesResult = await query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name IN ('devices', 'device_notifications')
-      `)
-
-      const existingTables = tablesResult.rows.map((row) => row.table_name)
-      console.log("Existing tables:", existingTables)
-
-      if (!existingTables.includes("devices")) {
-        return NextResponse.json({
-          devices: [],
-          pagination: {
-            page: 1,
-            limit: 10,
-            total: 0,
-            pages: 0,
-          },
-          _status: "error",
-          _message: "Devices table does not exist. Please run the database setup script.",
-        })
-      }
-    } catch (tableError) {
-      console.error("Error checking tables:", tableError)
-      return NextResponse.json({
-        devices: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          pages: 0,
-        },
-        _status: "error",
-        _message: `Cannot check database tables: ${tableError instanceof Error ? tableError.message : "Unknown error"}`,
       })
     }
 
@@ -92,18 +44,25 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       whereClause += whereClause ? " AND " : " WHERE "
-      whereClause += `(device_name ILIKE $${paramIndex} OR serial_number ILIKE $${paramIndex})`
+      whereClause += `(device_name ILIKE $${paramIndex} OR serial_number ILIKE $${paramIndex} OR mac_address ILIKE $${paramIndex})`
       queryParams.push(`%${search}%`)
       paramIndex++
     }
 
-    // Simple query to get devices
+    // Enhanced query to get devices with all new fields
     const devicesQuery = `
       SELECT 
         id, 
         serial_number, 
         device_name, 
         status, 
+        cpuid,
+        device_id,
+        mac_address,
+        video_device_name,
+        video_device_secret,
+        video_product_key,
+        tailscale_url,
         last_seen, 
         created_at, 
         updated_at
@@ -118,26 +77,10 @@ export async function GET(request: NextRequest) {
     console.log("Executing devices query:", devicesQuery)
     console.log("Query params:", queryParams)
 
-    let devicesResult
-    try {
-      devicesResult = await query(devicesQuery, queryParams)
-      console.log("Devices query successful, rows:", devicesResult.rows.length)
-    } catch (queryError) {
-      console.error("Error executing devices query:", queryError)
-      return NextResponse.json({
-        devices: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          pages: 0,
-        },
-        _status: "error",
-        _message: `Query failed: ${queryError instanceof Error ? queryError.message : "Unknown error"}`,
-      })
-    }
+    const devicesResult = await query(devicesQuery, queryParams)
+    console.log("Devices query successful, rows:", devicesResult.rows.length)
 
-    // Get notifications for each device (simplified)
+    // Get recent notifications for each device
     const devicesWithNotifications = []
     for (const device of devicesResult.rows) {
       try {
@@ -152,20 +95,26 @@ export async function GET(request: NextRequest) {
           FROM device_notifications 
           WHERE device_id = $1 
           ORDER BY timestamp DESC 
-          LIMIT 1
+          LIMIT 3
         `
         const notificationResult = await query(notificationQuery, [device.id])
 
         devicesWithNotifications.push({
           ...device,
           notifications: notificationResult.rows,
+          // Add computed fields for easier frontend handling
+          hasVideoInfo: !!(device.video_device_name || device.video_device_secret || device.video_product_key),
+          hasHardwareInfo: !!(device.cpuid || device.device_id || device.mac_address),
+          needsAuth: device.status === "auth_required" && !!device.tailscale_url,
         })
       } catch (notificationError) {
         console.error("Error fetching notifications for device:", device.id, notificationError)
-        // Add device without notifications if notification query fails
         devicesWithNotifications.push({
           ...device,
           notifications: [],
+          hasVideoInfo: false,
+          hasHardwareInfo: false,
+          needsAuth: false,
         })
       }
     }
@@ -203,19 +152,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result)
   } catch (error) {
     console.error("Unexpected error in devices API:", error)
-    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace")
-
     return NextResponse.json({
       devices: [],
-      pagination: {
-        page: 1,
-        limit: 10,
-        total: 0,
-        pages: 0,
-      },
+      pagination: { page: 1, limit: 10, total: 0, pages: 0 },
       _status: "error",
       _message: error instanceof Error ? error.message : "Unexpected server error",
-      _error: error instanceof Error ? error.stack : "No stack trace",
     })
   }
 }
