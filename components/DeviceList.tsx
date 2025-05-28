@@ -18,7 +18,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Search, Trash2, ExternalLink, RefreshCcw, AlertCircle, Monitor, Cpu, Wifi, Video, Info } from "lucide-react"
+// Thêm biểu tượng cho Tailscale URL
+import {
+  Search,
+  Trash2,
+  ExternalLink,
+  RefreshCcw,
+  AlertCircle,
+  Monitor,
+  Cpu,
+  Wifi,
+  Video,
+  Info,
+  Link,
+} from "lucide-react"
 
 interface Device {
   id: string
@@ -250,12 +263,21 @@ export function DeviceList() {
                           </div>
                         </div>
                       </TableCell>
+                      {/* Cập nhật phần hiển thị status để hiển thị Tailscale URL nổi bật hơn */}
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {getStatusBadge(device.status)}
-                          {device.needsAuth && (
-                            <Badge variant="outline" className="text-xs">
-                              Auth URL
+                          {device.tailscale_url && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs flex items-center gap-1 cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                window.open(device.tailscale_url, "_blank")
+                              }}
+                            >
+                              <Link className="h-3 w-3" />
+                              Tailscale Auth
                             </Badge>
                           )}
                         </div>
@@ -272,6 +294,7 @@ export function DeviceList() {
                         </div>
                       </TableCell>
                       <TableCell>{new Date(device.last_seen).toLocaleString()}</TableCell>
+                      {/* Cập nhật phần Actions để hiển thị nút Tailscale URL nổi bật hơn */}
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -286,14 +309,16 @@ export function DeviceList() {
                           </Button>
                           {device.tailscale_url && (
                             <Button
-                              variant="outline"
+                              variant="default"
                               size="sm"
+                              className="bg-blue-600 hover:bg-blue-700"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 window.open(device.tailscale_url, "_blank")
                               }}
                             >
-                              <ExternalLink className="h-4 w-4" />
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              <span className="hidden sm:inline">Auth</span>
                             </Button>
                           )}
                           <AlertDialog>
@@ -374,18 +399,27 @@ export function DeviceList() {
                                   {device.video_product_key}
                                 </div>
                               )}
+                              {/* Cập nhật phần chi tiết thiết bị để hiển thị Tailscale URL nổi bật hơn */}
                               {device.tailscale_url && (
-                                <div>
-                                  <strong>Tailscale URL:</strong>
+                                <div className="col-span-2 md:col-span-3">
+                                  <strong>Tailscale Auth URL:</strong>
                                   <br />
-                                  <a
-                                    href={device.tailscale_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:underline"
-                                  >
-                                    {device.tailscale_url.substring(0, 50)}...
-                                  </a>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <input
+                                      type="text"
+                                      value={device.tailscale_url}
+                                      readOnly
+                                      className="w-full p-2 bg-gray-100 border rounded font-mono text-xs"
+                                    />
+                                    <Button
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700"
+                                      onClick={() => window.open(device.tailscale_url, "_blank")}
+                                    >
+                                      <ExternalLink className="h-4 w-4 mr-1" />
+                                      Open
+                                    </Button>
+                                  </div>
                                 </div>
                               )}
                             </div>

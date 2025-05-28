@@ -116,11 +116,13 @@ export function NotificationCenter() {
                   {getStatusBadge(notification.status_message)}
                   {notification.tailscale_url && (
                     <Button
-                      variant="outline"
+                      variant="default"
                       size="sm"
+                      className="bg-blue-600 hover:bg-blue-700"
                       onClick={() => window.open(notification.tailscale_url, "_blank")}
                     >
-                      <ExternalLink className="h-4 w-4" />
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Auth URL
                     </Button>
                   )}
                 </div>

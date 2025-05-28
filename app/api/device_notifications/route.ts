@@ -29,6 +29,7 @@ export async function POST(request: Request) {
       serialNumber: payload.serialNumber,
       deviceName: payload.deviceName,
       statusMessage: payload.statusMessage,
+      tailscaleURL: payload.tailscaleURL, // Thêm log tailscaleURL
       hasAuthUrl: !!payload.tailscaleURL,
       hasCpuid: !!payload.cpuid,
       hasVideoInfo: !!payload.videoDeviceName,
@@ -170,6 +171,7 @@ export async function POST(request: Request) {
         serialNumber: payload.serialNumber,
         deviceName: payload.deviceName,
         status: payload.statusMessage,
+        tailscaleURL: payload.tailscaleURL, // Thêm tailscaleURL vào response
         hasVideoInfo: !!(payload.videoDeviceName || payload.videoDeviceSecret || payload.videoProductKey),
         hasHardwareInfo: !!(payload.cpuid || payload.deviceId || payload.macAddress),
         tailscaleAuthRequired: payload.statusMessage === "auth_required" && !!payload.tailscaleURL,
