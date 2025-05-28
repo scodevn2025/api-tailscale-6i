@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { query } from "@/lib/db"
 import type { NotificationPayload } from "@/lib/types"
 
 export async function POST(request: NextRequest) {
@@ -18,67 +18,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Find existing device
-    const { data: existingDevice } = await supabase
-      .from("devices")
-      .select("*")
-      .eq("serial_number", payload.serialNumber)
-      .single()
+    const existingDeviceResult = await query("SELECT * FROM devices WHERE serial_number = $1", [payload.serialNumber])
 
     let device
-    if (!existingDevice) {
+    if (existingDeviceResult.rows.length === 0) {
       // Create new device
-      const { data: newDevice, error: createError } = await supabase
-        .from("devices")
-        .insert({
-          serial_number: payload.serialNumber,
-          device_name: payload.deviceName,
-          status: payload.statusMessage,
-          last_seen: new Date().toISOString(),
-        })
-        .select()
-        .single()
-
-      if (createError) {
-        console.error("Error creating device:", createError)
-        return NextResponse.json({ error: "Failed to create device" }, { status: 500 })
-      }
-      device = newDevice
+      const createResult = await query(
+        `INSERT INTO devices (serial_number, device_name, status, last_seen) 
+         VALUES ($1, $2, $3, NOW()) 
+         RETURNING *`,
+        [payload.serialNumber, payload.deviceName, payload.statusMessage],
+      )
+      device = createResult.rows[0]
     } else {
       // Update existing device
-      const { data: updatedDevice, error: updateError } = await supabase
-        .from("devices")
-        .update({
-          device_name: payload.deviceName,
-          status: payload.statusMessage,
-          last_seen: new Date().toISOString(),
-        })
-        .eq("id", existingDevice.id)
-        .select()
-        .single()
-
-      if (updateError) {
-        console.error("Error updating device:", updateError)
-        return NextResponse.json({ error: "Failed to update device" }, { status: 500 })
-      }
-      device = updatedDevice
+      const updateResult = await query(
+        `UPDATE devices 
+         SET device_name = $1, status = $2, last_seen = NOW(), updated_at = NOW()
+         WHERE serial_number = $3 
+         RETURNING *`,
+        [payload.deviceName, payload.statusMessage, payload.serialNumber],
+      )
+      device = updateResult.rows[0]
     }
 
     // Create notification record
-    const { data: notification, error: notificationError } = await supabase
-      .from("device_notifications")
-      .insert({
-        device_id: device.id,
-        status_message: payload.statusMessage,
-        tailscale_url: payload.tailscaleURL,
-        original_log_message: payload.originalLogMessage,
-      })
-      .select()
-      .single()
+    const notificationResult = await query(
+      `INSERT INTO device_notifications (device_id, status_message, tailscale_url, original_log_message) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING *`,
+      [device.id, payload.statusMessage, payload.tailscaleURL, payload.originalLogMessage],
+    )
 
-    if (notificationError) {
-      console.error("Error creating notification:", notificationError)
-      return NextResponse.json({ error: "Failed to create notification" }, { status: 500 })
-    }
+    const notification = notificationResult.rows[0]
 
     return NextResponse.json({
       success: true,
