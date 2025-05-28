@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Device {
+  id           String   @id @default(cuid())
+  serialNumber String   @unique
+  deviceName   String
+  lastSeen     DateTime @default(now())
+  status       String   // "active", "auth_required", "offline"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  notifications DeviceNotification[]
+  
+  @@map("devices")
+}
+
+model DeviceNotification {
+  id                   String   @id @default(cuid())
+  deviceId             String
+  statusMessage        String
+  tailscaleURL         String?
+  originalLogMessage   String?
+  timestamp            DateTime @default(now())
+  
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  
+  @@map("device_notifications")
+}
